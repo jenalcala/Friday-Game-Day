@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Institute — Virtual Escape Room</title>
+  <style>
+    /* ===== ROOT VARIABLES ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #07071a;
+      --bg2: #0d0d25;
+      --card: #111130;
+      --card2: #181840;
+      --border: #252555;
+      --border2: #353575;
+      --gold: #ffd700;
+      --gold2: #cc9900;
+      --text: #dde0f5;
+      --dim: #7878a0;
+      --green: #00dd77;
+      --red: #ff4455;
+      --blue: #4488ff;
+      --amber: #ffaa22;
+      --teal: #22ccaa;
+      --purple: #bb44ff;
+      --mono: 'Courier New', Courier, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: Georgia, 'Times New Roman', serif;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+
+    /* ===== SCREEN SYSTEM ===== */
+    .screen { display: none; min-height: 100vh; }
+    .screen.active { display: block; }
+
+    /* ===== SHARED COMPONENTS ===== */
+    .container { max-width: 820px; margin: 0 auto; padding: 20px; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--dim);
+      margin-bottom: 10px;
+    }
+
+    button {
+      cursor: pointer;
+      font-family: inherit;
+      border: none;
+      border-radius: 6px;
+      padding: 10px 24px;
+      font-size: 0.95rem;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    button:hover { opacity: 0.85; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+
+    .btn-gold {
+      background: var(--gold);
+      color: #000;
+      font-weight: bold;
+      font-size: 1.05rem;
+      padding: 12px 32px;
+    }
+
+    .btn-outline {
+      background: transparent;
+      border: 1px solid var(--border2);
+      color: var(--dim);
+      font-size: 0.85rem;
+    }
+    .btn-outline:hover { color: var(--text); border-color: var(--text); }
+
+    .btn-hint {
+      background: transparent;
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      font-size: 0.85rem;
+      padding: 8px 18px;
+    }
+
+    input[type="text"] {
+      background: var(--bg2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 1.1rem;
+      padding: 10px 14px;
+      outline: none;
+      transition: border-color 0.2s;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    input[type="text"]:focus { border-color: var(--gold); }
+
+    .mono { font-family: var(--mono); }
+
+    /* ===== TOP BAR ===== */
+    .top-bar {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .room-badge {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .room-dots span {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--border2);
+      margin: 0 2px;
+      transition: background 0.3s;
+    }
+    .room-dots span.done { background: var(--green); }
+    .room-dots span.active { background: var(--gold); }
+
+    .timer-display {
+      font-family: var(--mono);
+      font-size: 1.4rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+    }
+
+    .team-label {
+      font-size: 0.8rem;
+      color: var(--dim);
+      text-align: right;
+    }
+
+    /* ===== ROOM HEADER ===== */
+    .room-header {
+      text-align: center;
+      padding: 28px 20px 20px;
+    }
+
+    .room-number-tag {
+      display: inline-block;
+      font-size: 0.7rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-bottom: 12px;
+      border: 1px solid;
+    }
+
+    .room-title { font-size: 1.9rem; margin-bottom: 6px; }
+    .room-meta { color: var(--dim); font-size: 0.9rem; }
+
+    /* ===== ROOM 1 THEME ===== */
+    #screen-1 .room-number-tag { color: var(--blue); border-color: var(--blue); }
+    #screen-1 .room-title { color: var(--blue); }
+    #screen-1 .highlight { color: var(--blue); }
+    #screen-1 .btn-submit { background: var(--blue); color: #fff; font-weight: bold; font-size: 1rem; }
+
+    /* ===== ROOM 2 THEME ===== */
+    #screen-2 .room-number-tag { color: var(--amber); border-color: var(--amber); }
+    #screen-2 .room-title { color: var(--amber); }
+    #screen-2 .highlight { color: var(--amber); }
+    #screen-2 .btn-submit { background: var(--amber); color: #000; font-weight: bold; font-size: 1rem; }
+
+    /* ===== ROOM 3 THEME ===== */
+    #screen-3 .room-number-tag { color: var(--teal); border-color: var(--teal); }
+    #screen-3 .room-title { color: var(--teal); }
+    #screen-3 .highlight { color: var(--teal); }
+    #screen-3 .btn-submit { background: var(--teal); color: #000; font-weight: bold; font-size: 1rem; }
+
+    /* ===== ROOM 4 THEME ===== */
+    #screen-4 .room-number-tag { color: var(--purple); border-color: var(--purple); }
+    #screen-4 .room-title { color: var(--purple); }
+    #screen-4 .highlight { color: var(--purple); }
+    #screen-4 .btn-submit { background: var(--purple); color: #fff; font-weight: bold; font-size: 1rem; }
+
+    /* ===== ATMOSPHERE BOX ===== */
+    .atmosphere {
+      border-left: 3px solid var(--border2);
+      padding: 14px 18px;
+      color: var(--dim);
+      font-style: italic;
+      font-size: 0.95rem;
+      margin-bottom: 18px;
+      line-height: 1.7;
+    }
+
+    /* ===== CIPHER DISPLAYS ===== */
+    .cipher-box {
+      background: #050510;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      font-family: var(--mono);
+      margin-bottom: 16px;
+    }
+
+    .cipher-code {
+      font-size: 1.6rem;
+      letter-spacing: 0.15em;
+      color: var(--gold);
+      text-align: center;
+      padding: 12px 0;
+    }
+
+    .cipher-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--dim);
+      margin-bottom: 6px;
+    }
+
+    /* ===== PHONE KEYPAD ===== */
+    .keypad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      max-width: 300px;
+      margin: 0 auto;
+    }
+
+    .key {
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      padding: 10px 6px;
+      text-align: center;
+      cursor: default;
+    }
+
+    .key .num {
+      display: block;
+      font-size: 1.3rem;
+      font-weight: bold;
+      color: var(--text);
+      font-family: var(--mono);
+      line-height: 1;
+    }
+
+    .key .letters {
+      display: block;
+      font-size: 0.65rem;
+      color: var(--dim);
+      letter-spacing: 0.15em;
+      margin-top: 3px;
+    }
+
+    .key.blank { background: transparent; border-color: transparent; }
+    .key.zero { grid-column: span 2; }
+
+    /* ===== BOOK CIPHER PASSAGE ===== */
+    .book-passage {
+      background: #0a0808;
+      border: 1px solid #2a2020;
+      border-radius: 8px;
+      padding: 18px 22px;
+      font-family: Georgia, serif;
+      font-size: 0.9rem;
+      line-height: 2;
+      color: #c8c0a0;
+    }
+
+    .book-line {
+      display: flex;
+      gap: 14px;
+      align-items: baseline;
+    }
+
+    .line-num {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--gold2);
+      min-width: 22px;
+      text-align: right;
+      user-select: none;
+    }
+
+    /* ===== CAESAR REFERENCE ===== */
+    .caesar-table {
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+
+    .caesar-row {
+      display: flex;
+      gap: 2px;
+    }
+
+    .caesar-cell {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      min-width: 22px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+    }
+
+    .caesar-row.plain .caesar-cell { background: var(--card2); color: var(--text); }
+    .caesar-row.cipher .caesar-cell { background: #1a1a00; color: var(--gold); }
+
+    /* ===== FIBONACCI SEQUENCE ===== */
+    .fib-sequence {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 14px 0;
+    }
+
+    .fib-num {
+      font-family: var(--mono);
+      font-size: 1.5rem;
+      color: var(--text);
+      background: var(--card2);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .fib-num.blank {
+      border: 2px dashed var(--purple);
+      color: var(--purple);
+      font-size: 1.8rem;
+    }
+
+    .fib-arrow { color: var(--dim); font-size: 1.2rem; }
+
+    /* ===== ANSWER AREA ===== */
+    .answer-area {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .answer-area input { flex: 1; min-width: 180px; }
+
+    .feedback {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-family: var(--mono);
+      margin-top: 10px;
+      display: none;
+    }
+    .feedback.show { display: block; }
+    .feedback.error { background: rgba(255,68,85,0.15); border: 1px solid var(--red); color: var(--red); }
+    .feedback.success { background: rgba(0,221,119,0.15); border: 1px solid var(--green); color: var(--green); }
+
+    /* ===== HINTS ===== */
+    .hints-section { margin-top: 14px; }
+
+    .hints-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .hint-card {
+      background: rgba(255,170,34,0.08);
+      border: 1px solid rgba(255,170,34,0.3);
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 0.88rem;
+      color: #ffcc88;
+      margin-bottom: 8px;
+      display: flex;
+      gap: 10px;
+    }
+
+    .hint-icon { color: var(--amber); flex-shrink: 0; }
+
+    /* ===== SUCCESS OVERLAY ===== */
+    .success-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+    }
+    .success-overlay.show { display: flex; }
+
+    .success-popup {
+      background: var(--card);
+      border: 2px solid var(--green);
+      border-radius: 14px;
+      padding: 40px;
+      text-align: center;
+      max-width: 440px;
+      width: 90%;
+      animation: pop-in 0.3s ease;
+    }
+
+    @keyframes pop-in {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .success-popup h2 { color: var(--green); font-size: 1.6rem; margin-bottom: 10px; }
+    .success-popup p { color: var(--dim); margin-bottom: 24px; }
+    .success-popup .time-badge {
+      font-family: var(--mono);
+      font-size: 1.2rem;
+      color: var(--gold);
+      margin-bottom: 24px;
+    }
+
+    /* ===== INTRO SCREEN ===== */
+    #screen-intro {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #screen-intro.active { display: flex; }
+
+    .intro-content {
+      max-width: 600px;
+      padding: 40px 24px;
+      text-align: center;
+    }
+
+    .logo-icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      display: block;
+    }
+
+    .game-title {
+      font-size: 2.6rem;
+      color: var(--gold);
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .game-subtitle {
+      color: var(--dim);
+      font-size: 1rem;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 30px;
+    }
+
+    .story-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 22px;
+      text-align: left;
+      margin-bottom: 28px;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      color: #b0b0cc;
+    }
+
+    .room-preview {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+
+    .preview-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 8px;
+      text-align: center;
+      font-size: 0.8rem;
+    }
+
+    .preview-card .preview-num { font-size: 1.1rem; font-weight: bold; margin-bottom: 4px; }
+    .preview-card .preview-label { color: var(--dim); font-size: 0.72rem; }
+    .preview-card:nth-child(1) .preview-num { color: var(--blue); }
+    .preview-card:nth-child(2) .preview-num { color: var(--amber); }
+    .preview-card:nth-child(3) .preview-num { color: var(--teal); }
+    .preview-card:nth-child(4) .preview-num { color: var(--purple); }
+
+    .team-input-area {
+      margin-bottom: 24px;
+    }
+
+    .team-input-label {
+      display: block;
+      color: var(--dim);
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    #team-name-input {
+      width: 100%;
+      background: var(--card);
+      border: 1px solid var(--border2);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: Georgia, serif;
+      font-size: 1rem;
+      padding: 12px 16px;
+      text-align: center;
+      text-transform: none;
+      letter-spacing: normal;
+      outline: none;
+    }
+    #team-name-input:focus { border-color: var(--gold); }
+    #team-name-input::placeholder { color: var(--dim); }
+
+    /* ===== VICTORY SCREEN ===== */
+    .victory-content {
+      max-width: 680px;
+      padding: 40px 24px;
+      text-align: center;
+      margin: 0 auto;
+    }
+
+    .victory-icon { font-size: 5rem; display: block; margin-bottom: 16px; }
+    .victory-title { font-size: 2.4rem; color: var(--gold); margin-bottom: 8px; }
+    .victory-subtitle { color: var(--dim); margin-bottom: 28px; font-size: 1rem; }
+
+    .total-time-display {
+      font-family: var(--mono);
+      font-size: 3rem;
+      color: var(--gold);
+      margin-bottom: 6px;
+    }
+
+    .total-time-label {
+      color: var(--dim);
+      font-size: 0.85rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 32px;
+    }
+
+    .stats-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 32px;
+      font-size: 0.9rem;
+    }
+
+    .stats-table th {
+      color: var(--dim);
+      font-size: 0.72rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+      font-weight: normal;
+    }
+
+    .stats-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+    }
+
+    .stats-table tr:last-child td { border-bottom: none; }
+    .stats-table td:first-child { font-family: Georgia, serif; font-size: 0.9rem; }
+
+    .hint-count-badge {
+      display: inline-block;
+      background: rgba(255,170,34,0.15);
+      color: var(--amber);
+      border-radius: 4px;
+      padding: 2px 8px;
+      font-size: 0.8rem;
+    }
+
+    .cert-line {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      color: var(--dim);
+      font-style: italic;
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .room-preview { grid-template-columns: repeat(2, 1fr); }
+      .cipher-code { font-size: 1.2rem; letter-spacing: 0.08em; }
+      .answer-area { flex-direction: column; }
+      .answer-area input { width: 100%; }
+      .answer-area .btn-submit { width: 100%; }
+      .top-bar { flex-direction: column; gap: 8px; text-align: center; }
+      .fib-num { width: 42px; height: 42px; font-size: 1.2rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===================================================
+     INTRO SCREEN
+     =================================================== -->
+<div id="screen-intro" class="screen active">
+  <div class="intro-content">
+    <span class="logo-icon">&#x1F512;</span>
+    <h1 class="game-title">THE INSTITUTE</h1>
+    <p class="game-subtitle">Virtual Escape Room</p>
+
+    <div class="story-box">
+      <strong style="color:var(--gold);">Briefing:</strong> Your team has been dispatched to the abandoned Institute of Cryptography to recover the research of the missing Professor Enigma. Before vanishing, the Professor secured everything behind four puzzle chambers — each one harder than the last.<br><br>
+      Crack the ciphers, unlock the doors, and escape before the facility seals permanently. Work together — every second counts.
+    </div>
+
+    <div class="room-preview">
+      <div class="preview-card">
+        <div class="preview-num">&#x2461;</div>
+        <div style="font-size:0.85rem;color:var(--blue);margin-bottom:4px;">&#x2460; THE ANTECHAMBER</div>
+        <div class="preview-label">Keypad Cipher<br>&#9733;&#9734;&#9734;&#9734; Easy</div>
+      </div>
+      <div class="preview-card">
+        <div class="preview-num">&#x2462;</div>
+        <div style="font-size:0.85rem;color:var(--amber);margin-bottom:4px;">&#x2461; THE ARCHIVE</div>
+        <div class="preview-label">Caesar Shift<br>&#9733;&#9733;&#9734;&#9734; Medium</div>
+      </div>
+      <div class="preview-card">
+        <div class="preview-num">&#x2463;</div>
+        <div style="font-size:0.85rem;color:var(--teal);margin-bottom:4px;">&#x2462; THE LIBRARY</div>
+        <div class="preview-label">Book Cipher<br>&#9733;&#9733;&#9733;&#9734; Hard</div>
+      </div>
+      <div class="preview-card">
+        <div class="preview-num">&#x2464;</div>
+        <div style="font-size:0.85rem;color:var(--purple);margin-bottom:4px;">&#x2463; FINAL VAULT</div>
+        <div class="preview-label">Caesar Shift<br>&#9733;&#9733;&#9733;&#9733; Very Hard</div>
+      </div>
+    </div>
+
+    <div class="team-input-area">
+      <label class="team-input-label" for="team-name-input">Your Team Name</label>
+      <input type="text" id="team-name-input" placeholder="e.g., Team Falcon" maxlength="40">
+    </div>
+
+    <button class="btn-gold" onclick="startGame()" style="width:100%;padding:16px;font-size:1.1rem;letter-spacing:0.05em;">
+      &#x1F511; BEGIN THE ESCAPE
+    </button>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     ROOM 1: THE ANTECHAMBER (Keypad Cipher)
+     =================================================== -->
+<div id="screen-1" class="screen">
+  <div class="top-bar">
+    <div class="room-badge">
+      <div class="room-dots" id="dots-1">
+        <span class="active"></span><span></span><span></span><span></span>
+      </div>
+      <span style="color:var(--dim);font-size:0.8rem;">Room 1 of 4</span>
+    </div>
+    <div class="timer-display" id="timer-1">00:00</div>
+    <div class="team-label" id="team-display-1">Team</div>
+  </div>
+
+  <div class="container">
+    <div class="room-header">
+      <div class="room-number-tag">Room 1 &mdash; Keypad Cipher &mdash; &#9733;&#9734;&#9734;&#9734; Easy</div>
+      <h1 class="room-title">The Antechamber</h1>
+      <p class="room-meta">Decode the keypad sequence to unlock the security door.</p>
+    </div>
+
+    <div class="atmosphere">
+      You push open the heavy iron door and step into a dimly lit security office. Flickering monitors line the walls, most displaying static. A reinforced door on the far side has a keypad lock. Pinned beside it is a faded instruction sheet with a phone keypad diagram and a sequence of numbers scrawled in red ink. Above the keypad, an inscription reads: <em>"Only those who speak in keys shall pass."</em>
+    </div>
+
+    <!-- Puzzle -->
+    <div class="card">
+      <div class="card-title">&#x1F50D; Cipher Clue</div>
+      <p style="margin-bottom:14px;font-size:0.9rem;color:var(--dim);">The code has been entered using <strong style="color:var(--text);">phone keypad multi-tap</strong>. Each group of repeated digits represents one letter. Use the keypad chart below to decode it.</p>
+
+      <div class="cipher-box">
+        <div class="cipher-label">Encoded sequence (each group = one letter):</div>
+        <div class="cipher-code">222 &middot; 444 &middot; 7 &middot; 44 &middot; 33 &middot; 777</div>
+      </div>
+
+      <!-- Phone Keypad -->
+      <div class="card-title" style="margin-top:18px;">Phone Keypad Reference</div>
+      <div class="keypad-grid">
+        <div class="key blank"></div>
+        <div class="key"><span class="num">1</span><span class="letters">&mdash;</span></div>
+        <div class="key blank"></div>
+
+        <div class="key"><span class="num">2</span><span class="letters">A &nbsp; B &nbsp; C</span></div>
+        <div class="key"><span class="num">3</span><span class="letters">D &nbsp; E &nbsp; F</span></div>
+        <div class="key"><span class="num">4</span><span class="letters">G &nbsp; H &nbsp; I</span></div>
+
+        <div class="key"><span class="num">5</span><span class="letters">J &nbsp; K &nbsp; L</span></div>
+        <div class="key"><span class="num">6</span><span class="letters">M &nbsp; N &nbsp; O</span></div>
+        <div class="key"><span class="num">7</span><span class="letters">P &nbsp; Q &nbsp; R &nbsp; S</span></div>
+
+        <div class="key"><span class="num">8</span><span class="letters">T &nbsp; U &nbsp; V</span></div>
+        <div class="key"><span class="num">9</span><span class="letters">W &nbsp; X &nbsp; Y &nbsp; Z</span></div>
+        <div class="key blank"></div>
+      </div>
+
+      <p style="margin-top:14px;font-size:0.82rem;color:var(--dim);">
+        <strong style="color:var(--text);">How it works:</strong> Press 2 once = A, twice = B, three times = C. Press 7 once = P, twice = Q, three times = R, four times = S. Groups are separated by &middot;
+      </p>
+    </div>
+
+    <!-- Answer -->
+    <div class="card">
+      <div class="card-title">&#x1F511; Enter The Password</div>
+      <div class="answer-area">
+        <input type="text" id="ans-1" placeholder="TYPE DECODED WORD" maxlength="20"
+               onkeydown="if(event.key==='Enter')checkAnswer(1)">
+        <button class="btn-submit" onclick="checkAnswer(1)">UNLOCK &#x1F513;</button>
+      </div>
+      <div class="feedback" id="fb-1"></div>
+      <p style="margin-top:10px;font-size:0.78rem;color:var(--dim);" id="attempts-1"></p>
+    </div>
+
+    <!-- Hints -->
+    <div class="card hints-section">
+      <div class="hints-header">
+        <div class="card-title" style="margin-bottom:0;">&#x1F4A1; Hints <span id="hint-count-1" style="color:var(--dim)">(3 available)</span></div>
+        <button class="btn-hint" onclick="revealHint(1)">Show Next Hint</button>
+      </div>
+      <div id="hints-1"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     ROOM 2: THE ARCHIVE (Caesar Cipher)
+     =================================================== -->
+<div id="screen-2" class="screen">
+  <div class="top-bar">
+    <div class="room-badge">
+      <div class="room-dots" id="dots-2">
+        <span class="done"></span><span class="active"></span><span></span><span></span>
+      </div>
+      <span style="color:var(--dim);font-size:0.8rem;">Room 2 of 4</span>
+    </div>
+    <div class="timer-display" id="timer-2">00:00</div>
+    <div class="team-label" id="team-display-2">Team</div>
+  </div>
+
+  <div class="container">
+    <div class="room-header">
+      <div class="room-number-tag">Room 2 &mdash; Caesar Shift Cipher &mdash; &#9733;&#9733;&#9734;&#9734; Medium</div>
+      <h1 class="room-title">The Archive</h1>
+      <p class="room-meta">Find the shift number, then decode the encrypted message.</p>
+    </div>
+
+    <div class="atmosphere">
+      You enter a room thick with the smell of old paper and dust. Filing cabinets line every wall. In the center, a single reading lamp illuminates a cluttered desk. A folded document bears an encrypted message. On the bulletin board nearby, someone has doodled a geometric shape. A sticky note reads: <em>"Shift with the wisdom of three-sided thinking."</em>
+    </div>
+
+    <!-- Step 1: Find shift -->
+    <div class="card">
+      <div class="card-title">&#x1F522; Step 1 — Find the Shift Number</div>
+      <p style="font-size:0.9rem;color:var(--dim);margin-bottom:14px;">Look at the bulletin board clue. The shift for this cipher is hidden in plain sight.</p>
+      <div style="text-align:center;padding:20px;background:#050510;border-radius:8px;">
+        <div style="display:inline-block;border:2px solid var(--amber);width:0;height:0;border-left:40px solid transparent;border-right:40px solid transparent;border-bottom:70px solid transparent;border-bottom-color:var(--amber);position:relative;">
+        </div>
+        <div style="width:80px;height:0;border-bottom:2px solid var(--amber);margin:0 auto;"></div>
+        <p style="color:var(--amber);margin-top:12px;font-size:0.85rem;letter-spacing:0.1em;">THREE-SIDED THINKING</p>
+      </div>
+    </div>
+
+    <!-- Step 2: Decode -->
+    <div class="card">
+      <div class="card-title">&#x1F50D; Step 2 — Decode The Message</div>
+      <p style="margin-bottom:14px;font-size:0.9rem;color:var(--dim);">Apply your shift to decode. Shift each letter <strong style="color:var(--text);">backward</strong> through the alphabet by the shift number.</p>
+
+      <div class="cipher-box">
+        <div class="cipher-label">Encrypted Message:</div>
+        <div class="cipher-code" style="font-size:1.4rem;letter-spacing:0.2em;">WKH FRGH LV VKDGRZ</div>
+      </div>
+
+      <!-- Caesar Reference Table -->
+      <div class="card-title" style="margin-top:18px;">Caesar Alphabet Reference (Shift = 3)</div>
+      <div class="caesar-table">
+        <div class="caesar-row plain" id="plain-row"></div>
+        <div class="caesar-row cipher" id="cipher-row"></div>
+      </div>
+      <p style="margin-top:8px;font-size:0.78rem;color:var(--dim);">
+        Top row = plain text &nbsp;|&nbsp; Bottom row = what it becomes when shifted by 3 &nbsp;|&nbsp; To <em>decode</em>, find the bottom-row letter and read the top-row letter above it.
+      </p>
+    </div>
+
+    <!-- Answer -->
+    <div class="card">
+      <div class="card-title">&#x1F511; Enter The Password</div>
+      <p style="font-size:0.82rem;color:var(--dim);margin-bottom:10px;">Decode the full message, then enter the <strong style="color:var(--text);">last word</strong> as the password.</p>
+      <div class="answer-area">
+        <input type="text" id="ans-2" placeholder="LAST WORD OF THE MESSAGE" maxlength="20"
+               onkeydown="if(event.key==='Enter')checkAnswer(2)">
+        <button class="btn-submit" onclick="checkAnswer(2)">UNLOCK &#x1F513;</button>
+      </div>
+      <div class="feedback" id="fb-2"></div>
+      <p style="margin-top:10px;font-size:0.78rem;color:var(--dim);" id="attempts-2"></p>
+    </div>
+
+    <!-- Hints -->
+    <div class="card hints-section">
+      <div class="hints-header">
+        <div class="card-title" style="margin-bottom:0;">&#x1F4A1; Hints <span id="hint-count-2" style="color:var(--dim)">(3 available)</span></div>
+        <button class="btn-hint" onclick="revealHint(2)">Show Next Hint</button>
+      </div>
+      <div id="hints-2"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     ROOM 3: THE LIBRARY (Book Cipher)
+     =================================================== -->
+<div id="screen-3" class="screen">
+  <div class="top-bar">
+    <div class="room-badge">
+      <div class="room-dots" id="dots-3">
+        <span class="done"></span><span class="done"></span><span class="active"></span><span></span>
+      </div>
+      <span style="color:var(--dim);font-size:0.8rem;">Room 3 of 4</span>
+    </div>
+    <div class="timer-display" id="timer-3">00:00</div>
+    <div class="team-label" id="team-display-3">Team</div>
+  </div>
+
+  <div class="container">
+    <div class="room-header">
+      <div class="room-number-tag">Room 3 &mdash; Book Cipher &mdash; &#9733;&#9733;&#9733;&#9734; Hard</div>
+      <h1 class="room-title">The Library</h1>
+      <p class="room-meta">Use the passage and coordinates to decode the hidden word.</p>
+    </div>
+
+    <div class="atmosphere">
+      A grand library stretches before you — mahogany shelves stacked floor to ceiling with leather-bound volumes. A single book lies open on the reading table, a typewritten passage visible on the page. Beside it, a coded note is pinned to the board: <em>"The book holds all answers, if you know where to look."</em>
+    </div>
+
+    <!-- The Passage -->
+    <div class="card">
+      <div class="card-title">&#x1F4D6; The Professor's Notes (Reference Passage)</div>
+      <div class="book-passage">
+        <div class="book-line">
+          <span class="line-num">1</span>
+          <span>The brave team had finally discovered the hidden entrance to the mysterious vault</span>
+        </div>
+        <div class="book-line">
+          <span class="line-num">2</span>
+          <span>Maps and ancient blueprints were scattered across every dusty table in the room</span>
+        </div>
+        <div class="book-line">
+          <span class="line-num">3</span>
+          <span>Looking at the symbols one member suddenly noticed a recurring pattern emerging</span>
+        </div>
+        <div class="book-line">
+          <span class="line-num">4</span>
+          <span>The red notebook on the shelf contained references to forgotten experiments underground</span>
+        </div>
+        <div class="book-line">
+          <span class="line-num">5</span>
+          <span>Both clues together would reveal the secret they had been searching for all along</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- The Cipher Code -->
+    <div class="card">
+      <div class="card-title">&#x1F4DC; The Code (LINE : WORD)</div>
+      <p style="margin-bottom:14px;font-size:0.9rem;color:var(--dim);">
+        Each coordinate is <strong style="color:var(--text);">LINE : WORD</strong>. Find that word in the passage above and take its <strong style="color:var(--teal);">first letter</strong>. The five letters spell the password.
+      </p>
+
+      <div class="cipher-box">
+        <div class="cipher-label">Cipher coordinates:</div>
+        <div style="display:flex;gap:16px;justify-content:center;flex-wrap:wrap;padding:14px 0;">
+          <div style="text-align:center;">
+            <div style="font-family:var(--mono);font-size:1.4rem;color:var(--gold);">3 : 12</div>
+            <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">Letter 1</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--mono);font-size:1.4rem;color:var(--gold);">3 : 6</div>
+            <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">Letter 2</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--mono);font-size:1.4rem;color:var(--gold);">5 : 1</div>
+            <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">Letter 3</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--mono);font-size:1.4rem;color:var(--gold);">2 : 8</div>
+            <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">Letter 4</div>
+          </div>
+          <div style="text-align:center;">
+            <div style="font-family:var(--mono);font-size:1.4rem;color:var(--gold);">4 : 8</div>
+            <div style="font-size:0.7rem;color:var(--dim);margin-top:4px;">Letter 5</div>
+          </div>
+        </div>
+      </div>
+
+      <p style="font-size:0.82rem;color:var(--dim);">
+        <strong style="color:var(--text);">Example:</strong> Code <span class="mono" style="color:var(--teal);">1:3</span> means Line 1, Word 3 = "had" &rarr; take the first letter = <strong style="color:var(--teal);">H</strong>
+      </p>
+    </div>
+
+    <!-- Answer -->
+    <div class="card">
+      <div class="card-title">&#x1F511; Enter The Password</div>
+      <div class="answer-area">
+        <input type="text" id="ans-3" placeholder="5-LETTER WORD" maxlength="20"
+               onkeydown="if(event.key==='Enter')checkAnswer(3)">
+        <button class="btn-submit" onclick="checkAnswer(3)">UNLOCK &#x1F513;</button>
+      </div>
+      <div class="feedback" id="fb-3"></div>
+      <p style="margin-top:10px;font-size:0.78rem;color:var(--dim);" id="attempts-3"></p>
+    </div>
+
+    <!-- Hints -->
+    <div class="card hints-section">
+      <div class="hints-header">
+        <div class="card-title" style="margin-bottom:0;">&#x1F4A1; Hints <span id="hint-count-3" style="color:var(--dim)">(3 available)</span></div>
+        <button class="btn-hint" onclick="revealHint(3)">Show Next Hint</button>
+      </div>
+      <div id="hints-3"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     ROOM 4: THE FINAL VAULT (Caesar Cipher - Hard)
+     =================================================== -->
+<div id="screen-4" class="screen">
+  <div class="top-bar">
+    <div class="room-badge">
+      <div class="room-dots" id="dots-4">
+        <span class="done"></span><span class="done"></span><span class="done"></span><span class="active"></span>
+      </div>
+      <span style="color:var(--dim);font-size:0.8rem;">Room 4 of 4</span>
+    </div>
+    <div class="timer-display" id="timer-4">00:00</div>
+    <div class="team-label" id="team-display-4">Team</div>
+  </div>
+
+  <div class="container">
+    <div class="room-header">
+      <div class="room-number-tag">Room 4 &mdash; Caesar Shift Cipher &mdash; &#9733;&#9733;&#9733;&#9733; Very Hard</div>
+      <h1 class="room-title">The Final Vault</h1>
+      <p class="room-meta">Crack the final cipher and claim your freedom.</p>
+    </div>
+
+    <div class="atmosphere">
+      The last room is different — cold, dimly lit, and covered floor to ceiling in mathematical scribblings. A glowing terminal on the far wall displays an encrypted message beneath a blinking cursor. No alphabet chart. No easy clue. Only a framed sequence of numbers on the wall, one cell conspicuously left blank. Professor Enigma's voice echoes on a recorder: <em>"The pattern reveals the key. The key reveals the door."</em>
+    </div>
+
+    <!-- Step 1: Find shift from Fibonacci -->
+    <div class="card">
+      <div class="card-title">&#x1F522; Step 1 — Crack The Sequence</div>
+      <p style="font-size:0.9rem;color:var(--dim);margin-bottom:16px;">Framed on the wall is this sequence of numbers. One is missing. The missing number is your shift.</p>
+
+      <div class="fib-sequence">
+        <div class="fib-num">1</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">1</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">2</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">3</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">5</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num blank">?</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">13</div>
+        <div class="fib-arrow">,</div>
+        <div class="fib-num">21</div>
+      </div>
+      <p style="text-align:center;font-size:0.82rem;color:var(--dim);">Each number in this sequence equals the sum of the two numbers before it.</p>
+    </div>
+
+    <!-- Step 2: Decode message -->
+    <div class="card">
+      <div class="card-title">&#x1F4BB; Step 2 — Decrypt The Terminal</div>
+      <p style="margin-bottom:14px;font-size:0.9rem;color:var(--dim);">Apply your shift to decode. Shift each letter <strong style="color:var(--text);">backward</strong> through the alphabet. No reference table provided — you must construct it yourself.</p>
+
+      <div class="cipher-box">
+        <div class="cipher-label">Terminal Output:</div>
+        <div class="cipher-code" style="font-size:1.3rem;letter-spacing:0.18em;">BPM NQVIT KWLM QA NZMMLWU</div>
+      </div>
+
+      <div style="background:rgba(187,68,255,0.08);border:1px solid rgba(187,68,255,0.3);border-radius:6px;padding:12px 16px;margin-top:12px;font-size:0.82rem;color:#cc88ff;">
+        <strong>Reminder:</strong> To decode a Caesar cipher, find each letter's position in the alphabet (A=1 ... Z=26). Subtract the shift. If the result goes below 1, wrap around by adding 26.
+      </div>
+    </div>
+
+    <!-- Answer -->
+    <div class="card">
+      <div class="card-title">&#x1F511; Enter The Password</div>
+      <p style="font-size:0.82rem;color:var(--dim);margin-bottom:10px;">Decode the full message, then enter the <strong style="color:var(--text);">last word</strong> as the password.</p>
+      <div class="answer-area">
+        <input type="text" id="ans-4" placeholder="LAST WORD OF THE MESSAGE" maxlength="20"
+               onkeydown="if(event.key==='Enter')checkAnswer(4)">
+        <button class="btn-submit" onclick="checkAnswer(4)">ESCAPE &#x1F513;</button>
+      </div>
+      <div class="feedback" id="fb-4"></div>
+      <p style="margin-top:10px;font-size:0.78rem;color:var(--dim);" id="attempts-4"></p>
+    </div>
+
+    <!-- Hints -->
+    <div class="card hints-section">
+      <div class="hints-header">
+        <div class="card-title" style="margin-bottom:0;">&#x1F4A1; Hints <span id="hint-count-4" style="color:var(--dim)">(3 available)</span></div>
+        <button class="btn-hint" onclick="revealHint(4)">Show Next Hint</button>
+      </div>
+      <div id="hints-4"></div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     VICTORY SCREEN
+     =================================================== -->
+<div id="screen-victory" class="screen">
+  <div class="victory-content">
+    <span class="victory-icon">&#x1F3C6;</span>
+    <h1 class="victory-title">ESCAPED!</h1>
+    <p class="victory-subtitle" id="victory-subtitle">Your team has cracked all four of Professor Enigma's cipher chambers.</p>
+
+    <div class="total-time-display" id="total-time-display">00:00</div>
+    <div class="total-time-label">Total Escape Time</div>
+
+    <div class="card" style="text-align:left;">
+      <div class="card-title">Room-by-Room Breakdown</div>
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>Room</th>
+            <th>Time</th>
+            <th>Attempts</th>
+            <th>Hints Used</th>
+          </tr>
+        </thead>
+        <tbody id="stats-body"></tbody>
+      </table>
+    </div>
+
+    <div class="cert-line" id="cert-line">
+      "This certifies that the team of Professor Enigma's Institute has demonstrated exceptional cryptographic skill."
+    </div>
+
+    <button class="btn-gold" onclick="restartGame()" style="width:100%;padding:14px;">
+      &#x1F504; Play Again
+    </button>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     SUCCESS OVERLAY
+     =================================================== -->
+<div class="success-overlay" id="success-overlay">
+  <div class="success-popup">
+    <div style="font-size:3rem;margin-bottom:12px;">&#x1F513;</div>
+    <h2>Door Unlocked!</h2>
+    <p id="success-msg">Well done! Moving to the next room...</p>
+    <div class="time-badge" id="success-time"></div>
+    <button class="btn-gold" onclick="advanceRoom()" style="width:100%;margin-top:8px;">
+      Continue &rarr;
+    </button>
+  </div>
+</div>
+
+
+<!-- ===================================================
+     JAVASCRIPT
+     =================================================== -->
+<script>
+  // ===== ROOM DATA =====
+  const ROOMS = [
+    {
+      num: 1,
+      name: 'The Antechamber',
+      type: 'Keypad Cipher',
+      answer: 'cipher',
+      hints: [
+        'Each group of identical digits represents one letter. Count how many times the same digit repeats in each group — that tells you how many times that key was pressed.',
+        'On a phone keypad: key 2 = ABC, key 3 = DEF, key 4 = GHI, key 7 = PQRS. The 1st letter on a key = 1 press, 2nd letter = 2 presses, 3rd letter = 3 presses.',
+        'Decode each group: <strong>222</strong> = press 2 three times = C &nbsp;|&nbsp; <strong>444</strong> = press 4 three times = I &nbsp;|&nbsp; <strong>7</strong> = press 7 once = P &nbsp;|&nbsp; <strong>44</strong> = press 4 twice = H &nbsp;|&nbsp; <strong>33</strong> = press 3 twice = E &nbsp;|&nbsp; <strong>777</strong> = press 7 three times = R'
+      ]
+    },
+    {
+      num: 2,
+      name: 'The Archive',
+      type: 'Caesar Shift Cipher',
+      answer: 'shadow',
+      hints: [
+        'A Caesar cipher shifts every letter by a fixed number. To decode, you shift each letter BACKWARD. First find the shift number: look at the three-sided shape on the bulletin board.',
+        'A triangle has 3 sides — the shift is 3. To decode, take each letter and go 3 steps backward in the alphabet. W becomes T, K becomes H, H becomes E...',
+        'The decoded message is: <strong>THE CODE IS SHADOW</strong>. Enter the last word as the password.'
+      ]
+    },
+    {
+      num: 3,
+      name: 'The Library',
+      type: 'Book Cipher',
+      answer: 'ember',
+      hints: [
+        'Each coordinate is LINE : WORD. Find the word at that position in the passage (count from left, starting at 1). Then take only the FIRST LETTER of that word.',
+        'Count words very carefully! Line 3 word 12 = "emerging" (E), Line 3 word 6 = "member" (M), Line 5 word 1 = "Both" (B), Line 2 word 8 = "every" (E), Line 4 word 8 = "references" (R).',
+        'The five first letters spell: <strong>E &ndash; M &ndash; B &ndash; E &ndash; R</strong>. Enter that word as the password.'
+      ]
+    },
+    {
+      num: 4,
+      name: 'The Final Vault',
+      type: 'Caesar Shift Cipher',
+      answer: 'freedom',
+      hints: [
+        'This is a Caesar cipher. Find the shift first — study the number sequence carefully. Each number equals the sum of the two numbers before it. What number belongs in the blank?',
+        'The sequence is Fibonacci: 1, 1, 2, 3, 5, <strong>8</strong>, 13, 21 — because 3+5=8. Your shift is 8. Now shift every letter in the encoded message backward by 8 positions.',
+        'Decoded message: <strong>THE FINAL CODE IS FREEDOM</strong>. Enter the last word as the password.'
+      ]
+    }
+  ];
+
+  // ===== GAME STATE =====
+  const state = {
+    teamName: 'Unknown Team',
+    currentRoom: 0,
+    startTime: 0,
+    roomStartTime: 0,
+    attempts: [0, 0, 0, 0],
+    hintsRevealed: [0, 0, 0, 0],
+    roomTimes: [0, 0, 0, 0],
+    timerInterval: null
+  };
+
+  // ===== UTILITY =====
+  function formatTime(ms) {
+    const totalSec = Math.floor(ms / 1000);
+    const m = Math.floor(totalSec / 60);
+    const s = totalSec % 60;
+    return m.toString().padStart(2,'0') + ':' + s.toString().padStart(2,'0');
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.add('active');
+      window.scrollTo(0, 0);
+    }
+  }
+
+  // ===== TIMER =====
+  function startTimer() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.timerInterval = setInterval(updateTimers, 1000);
+  }
+
+  function updateTimers() {
+    const elapsed = Date.now() - state.startTime;
+    const roomElapsed = Date.now() - state.roomStartTime;
+    const r = state.currentRoom;
+    if (r >= 1 && r <= 4) {
+      const timerEl = document.getElementById('timer-' + r);
+      if (timerEl) timerEl.textContent = formatTime(elapsed);
+    }
+  }
+
+  // ===== BUILD CAESAR TABLE (Room 2) =====
+  function buildCaesarTable() {
+    const alpha = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    const shift = 3;
+    const plainRow = document.getElementById('plain-row');
+    const cipherRow = document.getElementById('cipher-row');
+    if (!plainRow || !cipherRow) return;
+    plainRow.innerHTML = '';
+    cipherRow.innerHTML = '';
+    for (let i = 0; i < 26; i++) {
+      const pCell = document.createElement('div');
+      pCell.className = 'caesar-cell';
+      pCell.textContent = alpha[i];
+      plainRow.appendChild(pCell);
+
+      const cCell = document.createElement('div');
+      cCell.className = 'caesar-cell';
+      cCell.textContent = alpha[(i + shift) % 26];
+      cipherRow.appendChild(cCell);
+    }
+  }
+
+  // ===== START GAME =====
+  function startGame() {
+    const nameInput = document.getElementById('team-name-input');
+    state.teamName = nameInput.value.trim() || 'Unknown Team';
+    state.currentRoom = 1;
+    state.startTime = Date.now();
+    state.roomStartTime = Date.now();
+    state.attempts = [0, 0, 0, 0];
+    state.hintsRevealed = [0, 0, 0, 0];
+    state.roomTimes = [0, 0, 0, 0];
+
+    // Update team labels in all rooms
+    for (let i = 1; i <= 4; i++) {
+      const el = document.getElementById('team-display-' + i);
+      if (el) el.textContent = state.teamName;
+    }
+
+    buildCaesarTable();
+    showScreen('screen-1');
+    startTimer();
+  }
+
+  // ===== CHECK ANSWER =====
+  function checkAnswer(roomNum) {
+    const input = document.getElementById('ans-' + roomNum);
+    const fb = document.getElementById('fb-' + roomNum);
+    const attEl = document.getElementById('attempts-' + roomNum);
+    const idx = roomNum - 1;
+
+    const typed = input.value.trim().toLowerCase();
+    state.attempts[idx]++;
+
+    if (attEl) attEl.textContent = 'Attempts: ' + state.attempts[idx];
+
+    if (typed === ROOMS[idx].answer) {
+      // Correct!
+      state.roomTimes[idx] = Date.now() - state.roomStartTime;
+
+      fb.textContent = '';
+      fb.className = 'feedback';
+
+      // Show success overlay
+      const overlay = document.getElementById('success-overlay');
+      const msgEl = document.getElementById('success-msg');
+      const timeEl = document.getElementById('success-time');
+
+      if (roomNum < 4) {
+        msgEl.textContent = 'Correct! Moving to ' + ROOMS[roomNum].name + '...';
+      } else {
+        msgEl.textContent = 'Brilliant! You\'ve cracked the final cipher!';
+      }
+      timeEl.textContent = 'Room time: ' + formatTime(state.roomTimes[idx]);
+      overlay.classList.add('show');
+    } else {
+      fb.className = 'feedback error show';
+      if (typed === '') {
+        fb.textContent = 'Please enter a password.';
+      } else {
+        fb.textContent = 'Incorrect. Check your decoding and try again.';
+      }
+
+      // Shake animation on input
+      input.style.borderColor = 'var(--red)';
+      setTimeout(() => { input.style.borderColor = ''; }, 1500);
+    }
+  }
+
+  // ===== ADVANCE TO NEXT ROOM =====
+  function advanceRoom() {
+    const overlay = document.getElementById('success-overlay');
+    overlay.classList.remove('show');
+
+    if (state.currentRoom >= 4) {
+      // Show victory
+      showVictory();
+      if (state.timerInterval) clearInterval(state.timerInterval);
+    } else {
+      state.currentRoom++;
+      state.roomStartTime = Date.now();
+
+      // Clear answer inputs and feedback
+      const prevInput = document.getElementById('ans-' + (state.currentRoom - 1));
+      if (prevInput) prevInput.value = '';
+
+      showScreen('screen-' + state.currentRoom);
+    }
+  }
+
+  // ===== REVEAL HINT =====
+  function revealHint(roomNum) {
+    const idx = roomNum - 1;
+    const revealed = state.hintsRevealed[idx];
+    const hints = ROOMS[idx].hints;
+    const container = document.getElementById('hints-' + roomNum);
+    const countEl = document.getElementById('hint-count-' + roomNum);
+
+    if (revealed >= hints.length) {
+      // No more hints
+      const btn = container.parentElement.querySelector('.btn-hint');
+      if (btn) { btn.textContent = 'No more hints'; btn.disabled = true; btn.style.opacity = '0.4'; }
+      return;
+    }
+
+    const hintDiv = document.createElement('div');
+    hintDiv.className = 'hint-card';
+    hintDiv.innerHTML = '<span class="hint-icon">&#x2B50;</span><span>' + hints[revealed] + '</span>';
+    container.appendChild(hintDiv);
+
+    state.hintsRevealed[idx]++;
+
+    const remaining = hints.length - state.hintsRevealed[idx];
+    if (countEl) countEl.textContent = '(' + remaining + ' remaining)';
+
+    if (remaining === 0) {
+      const btn = container.parentElement.querySelector('.btn-hint');
+      if (btn) { btn.textContent = 'No more hints'; btn.disabled = true; btn.style.opacity = '0.4'; }
+    }
+  }
+
+  // ===== SHOW VICTORY =====
+  function showVictory() {
+    showScreen('screen-victory');
+
+    const totalMs = Date.now() - state.startTime;
+
+    document.getElementById('total-time-display').textContent = formatTime(totalMs);
+
+    const subtitle = document.getElementById('victory-subtitle');
+    subtitle.textContent = state.teamName + ' has cracked all four of Professor Enigma\'s cipher chambers!';
+
+    const certLine = document.getElementById('cert-line');
+    certLine.textContent = '"This certifies that ' + state.teamName + ' has demonstrated exceptional cryptographic skill and successfully escaped The Institute."';
+
+    const tbody = document.getElementById('stats-body');
+    tbody.innerHTML = '';
+
+    const roomNames = ['The Antechamber', 'The Archive', 'The Library', 'The Final Vault'];
+    let totalHints = 0;
+    let totalAttempts = 0;
+
+    for (let i = 0; i < 4; i++) {
+      totalHints += state.hintsRevealed[i];
+      totalAttempts += state.attempts[i];
+      const tr = document.createElement('tr');
+      const hintsLabel = state.hintsRevealed[i] > 0
+        ? '<span class="hint-count-badge">&#x2B50; ' + state.hintsRevealed[i] + ' hint' + (state.hintsRevealed[i] > 1 ? 's' : '') + '</span>'
+        : '<span style="color:var(--green)">&#x2714; None</span>';
+      tr.innerHTML = `
+        <td>Room ${i+1}: ${roomNames[i]}</td>
+        <td>${formatTime(state.roomTimes[i])}</td>
+        <td>${state.attempts[i]}</td>
+        <td>${hintsLabel}</td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    // Totals row
+    const totalRow = document.createElement('tr');
+    totalRow.style.fontWeight = 'bold';
+    totalRow.style.borderTop = '2px solid var(--border2)';
+    totalRow.innerHTML = `
+      <td style="color:var(--gold);">TOTAL</td>
+      <td style="color:var(--gold);">${formatTime(totalMs)}</td>
+      <td>${totalAttempts}</td>
+      <td>${totalHints > 0 ? totalHints + ' hint' + (totalHints > 1 ? 's' : '') : 'No hints!'}</td>
+    `;
+    tbody.appendChild(totalRow);
+  }
+
+  // ===== RESTART =====
+  function restartGame() {
+    if (state.timerInterval) clearInterval(state.timerInterval);
+    state.currentRoom = 0;
+
+    // Clear all inputs and feedback
+    for (let i = 1; i <= 4; i++) {
+      const inp = document.getElementById('ans-' + i);
+      const fb = document.getElementById('fb-' + i);
+      const att = document.getElementById('attempts-' + i);
+      const hintDiv = document.getElementById('hints-' + i);
+      const countEl = document.getElementById('hint-count-' + i);
+      if (inp) inp.value = '';
+      if (fb) { fb.textContent = ''; fb.className = 'feedback'; }
+      if (att) att.textContent = '';
+      if (hintDiv) hintDiv.innerHTML = '';
+      if (countEl) countEl.textContent = '(3 available)';
+
+      // Re-enable hint buttons
+      const btns = document.querySelectorAll('#screen-' + i + ' .btn-hint');
+      btns.forEach(b => { b.disabled = false; b.style.opacity = ''; b.textContent = 'Show Next Hint'; });
+    }
+
+    document.getElementById('team-name-input').value = '';
+    showScreen('screen-intro');
+  }
+
+  // ===== KEYBOARD: ENTER KEY in team name field =====
+  document.getElementById('team-name-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') startGame();
+  });
+
+  // ===== INIT: build Caesar table on load =====
+  document.addEventListener('DOMContentLoaded', buildCaesarTable);
+</script>
+
+</body>
+</html>
